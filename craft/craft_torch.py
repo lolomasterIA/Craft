@@ -1,6 +1,6 @@
 
 """
-CRAFT Module for Tensorflow
+CRAFT Module for pytorch
 """
 
 from abc import ABC, abstractmethod
@@ -17,30 +17,31 @@ from .sobol.estimators import JansenEstimator
 
 
 def torch_to_numpy(tensor):
-  try:
-    return tensor.detach().cpu().numpy()
-  except:
-    return np.array(tensor)
+    try:
+        return tensor.detach().cpu().numpy()
+    except:
+        return np.array(tensor)
 
 
 def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda'):
-  nb_batchs = ceil(len(dataset) / batch_size)
-  start_ids = [i*batch_size for i in range(nb_batchs)]
+    nb_batchs = ceil(len(dataset) / batch_size)
+    start_ids = [i*batch_size for i in range(nb_batchs)]
 
-  results = []
+    results = []
 
-  with torch.no_grad():
-    for i in start_ids:
-      x = torch.tensor(dataset[i:i+batch_size])
-      x = x.to(device)
+    with torch.no_grad():
+        for i in start_ids:
+            x = torch.tensor(dataset[i:i+batch_size])
+            x = x.to(device)
 
-      if resize:
-        x = torch.nn.functional.interpolate(x, size=resize, mode='bilinear', align_corners=False)
+        if resize:
+            x = torch.nn.functional.interpolate(
+                x, size=resize, mode='bilinear', align_corners=False)
 
-      results.append(model(x).cpu())
+        results.append(model(x).cpu())
 
-  results = torch.cat(results)
-  return results
+    results = torch.cat(results)
+    return results
 
 
 class BaseConceptExtractor(ABC):
@@ -62,15 +63,17 @@ class BaseConceptExtractor(ABC):
 
     """
 
-    def __init__(self, input_to_latent : Callable,
-                       latent_to_logit : Optional[Callable] = None,
-                       number_of_concepts: int = 20,
-                       batch_size: int = 64):
+    def __init__(self, input_to_latent: Callable,
+                 latent_to_logit: Optional[Callable] = None,
+                 number_of_concepts: int = 20,
+                 batch_size: int = 64):
 
         # sanity checks
-        assert(number_of_concepts > 0), "number_of_concepts must be greater than 0"
-        assert(batch_size > 0), "batch_size must be greater than 0"
-        assert(callable(input_to_latent)), "input_to_latent must be a callable function"
+        assert (number_of_concepts >
+                0), "number_of_concepts must be greater than 0"
+        assert (batch_size > 0), "batch_size must be greater than 0"
+        assert (callable(input_to_latent)
+                ), "input_to_latent must be a callable function"
 
         self.input_to_latent = input_to_latent
         self.latent_to_logit = latent_to_logit
@@ -135,54 +138,94 @@ class Craft(BaseConceptExtractor):
     """
 
     def __init__(self, input_to_latent: Callable,
-                       latent_to_logit: Optional[Callable] = None,
-                       number_of_concepts: int = 20,
-                       batch_size: int = 64,
-                       patch_size: int = 64,
-                       device : str = 'cuda'):
+                 latent_to_logit: Optional[Callable] = None,
+                 number_of_concepts: int = 20,
+                 batch_size: int = 64,
+                 patch_size: int = 64,
+                 device: str = 'cuda'):
         super().__init__(input_to_latent, latent_to_logit, number_of_concepts, batch_size)
 
         self.patch_size = patch_size
         self.activation_shape = None
         self.device = device
 
-    def fit(self, inputs: np.ndarray):
+    def fit(self, inputs):
         """
-        Fit the Craft model to the input data.
+        Fit the Craft model to `inputs`.
 
         Parameters
         ----------
-        inputs : np.ndarray
-            Preprocessed Iinput data of shape (n_samples, channels, height, width).
-            (x1, x2, ..., xn) in the paper.
+        inputs: 4-D tensor | 2-D array | list/tuple
+        * Images  .......... (N, C, H, W)   — comportement historique.
+        * Activations 2-D .. (N, D)         — déjà calculées, positives.
+            * Liste/tuple ....... données brutes(ex. list[str])   —
+            seront encodées via `input_to_latent`.
 
         Returns
         -------
-        (X, U, W)
-            A tuple containing the crops (X in the paper),
-            the concepts values (U) and the concepts basis (W).
+        (patches, U, W)
+        patches: torch.Tensor | None
+            Les patches extraits pour les images, sinon None.
+            U: np.ndarray
+            Les activations conceptuelles (N, R).
+            W: np.ndarray
+            La base de concepts (R, D).
         """
-        assert len(inputs.shape) == 4, "Input data must be of shape (n_samples, channels, height, width)."
-        assert inputs.shape[2] == inputs.shape[3], "Input data must be square."
+        # Datatype to analyse : image, no changes
+        # Add text format
+        is_image = isinstance(inputs, torch.Tensor) and inputs.ndim == 4
+        is_act2d = isinstance(
+            inputs, (np.ndarray, torch.Tensor)) and inputs.ndim == 2
+        is_sequence = isinstance(inputs, (list, tuple))
 
-        image_size = inputs.shape[2]
+        if not (is_image or is_act2d or is_sequence):
+            raise ValueError("Unsupported input type for Craft.fit")
 
-        # extract patches from the input data, keep patches on cpu
-        strides = int(self.patch_size * 0.80)
+        # If image, same behaviour
+        if is_image:
+            assert len(
+                inputs.shape) == 4, "Input data must be of shape (n_samples, channels, height, width)."
+            assert inputs.shape[2] == inputs.shape[3], "Input data must be square."
 
-        patches = torch.nn.functional.unfold(inputs, kernel_size=self.patch_size, stride=strides)
-        patches = patches.transpose(1, 2).contiguous().view(-1, 3, self.patch_size, self.patch_size)
+            image_size = inputs.shape[2]
 
-        # encode the patches and obtain the activations
-        activations = _batch_inference(self.input_to_latent, patches, self.batch_size, image_size, 
-                                       device=self.device)
+            # extract patches from the input data, keep patches on cpu
+            strides = int(self.patch_size * 0.80)
+
+            patches = torch.nn.functional.unfold(
+                inputs, kernel_size=self.patch_size, stride=strides)
+            patches = patches.transpose(1, 2).contiguous(
+            ).view(-1, 3, self.patch_size, self.patch_size)
+
+            # encode the patches and obtain the activations
+            activations = _batch_inference(self.input_to_latent, patches, self.batch_size, image_size,
+                                           device=self.device)
+
+            # if the activations have shape (n_samples, height, width, n_channels),
+            # apply average pooling
+            if len(activations.shape) == 4:
+                activations = torch.mean(activations, dim=(2, 3))
+
+        # ACtivations 2d
+        elif is_act2d:
+            patches = None
+            activations = torch.as_tensor(inputs, device=self.device)
+
+        # List / Tupple  (ex. text)
+        else:
+            patches = None
+            batches = []
+            # we don't use _batch_inference to not change it
+            for i in range(0, len(inputs), self.batch_size):
+                # sous-liste de chaînes
+                sub_texts = inputs[i: i + self.batch_size]
+                with torch.no_grad():
+                    acts = self.input_to_latent(
+                        sub_texts).to(self.device)  # (b, D)
+                batches.append(acts)
+            activations = torch.cat(batches, dim=0)              # (N, D)
 
         assert torch.min(activations) >= 0.0, "Activations must be positive."
-
-        # if the activations have shape (n_samples, height, width, n_channels),
-        # apply average pooling
-        if len(activations.shape) == 4:
-            activations = torch.mean(activations, dim=(2, 3))
 
         # apply NMF to the activations to obtain matrices U and W
         reducer = NMF(n_components=self.number_of_concepts)
@@ -205,7 +248,8 @@ class Craft(BaseConceptExtractor):
         """
 
         if not hasattr(self, 'reducer'):
-            raise NotFittedError("The factorization model has not been fitted to input data yet.")
+            raise NotFittedError(
+                "The factorization model has not been fitted to input data yet.")
 
     def transform(self, inputs: np.ndarray, activations: Optional[np.ndarray] = None):
         self.check_if_fitted()
@@ -220,14 +264,16 @@ class Craft(BaseConceptExtractor):
             # (N, C, W, H) -> (N * W * H, C)
             activation_size = activations.shape[-1]
             activations = activations.permute(0, 2, 3, 1)
-            activations = torch.reshape(activations, (-1, activations.shape[-1]))
+            activations = torch.reshape(
+                activations, (-1, activations.shape[-1]))
 
         W_dtype = self.reducer.components_.dtype
         U = self.reducer.transform(torch_to_numpy(activations).astype(W_dtype))
 
         if is_4d:
-          # (N * W * H, R) -> (N, W, H, R)
-          U = np.reshape(U, (-1, activation_size, activation_size, U.shape[-1]))
+            # (N * W * H, R) -> (N, W, H, R)
+            U = np.reshape(
+                U, (-1, activation_size, activation_size, U.shape[-1]))
 
         return U
 
@@ -254,7 +300,8 @@ class Craft(BaseConceptExtractor):
 
         U = self.transform(inputs)
 
-        masks = HaltonSequence()(self.number_of_concepts, nb_design=nb_design).astype(np.float32)
+        masks = HaltonSequence()(self.number_of_concepts,
+                                 nb_design=nb_design).astype(np.float32)
         estimator = JansenEstimator()
 
         importances = []
@@ -281,8 +328,10 @@ class Craft(BaseConceptExtractor):
             # concept id to estimate sobol indices
             for u in U:
                 u_perturbated = u[None, :] * masks[:, None, None, :]
-                a_perturbated = np.reshape(u_perturbated,(-1, u.shape[-1])) @ self.W
-                a_perturbated = np.reshape(a_perturbated, (len(masks), U.shape[1], U.shape[2], -1))
+                a_perturbated = np.reshape(
+                    u_perturbated, (-1, u.shape[-1])) @ self.W
+                a_perturbated = np.reshape(
+                    a_perturbated, (len(masks), U.shape[1], U.shape[2], -1))
                 a_perturbated = np.moveaxis(a_perturbated, -1, 1)
 
                 y_pred = _batch_inference(self.latent_to_logit, a_perturbated, self.batch_size,
@@ -296,3 +345,13 @@ class Craft(BaseConceptExtractor):
                 importances.append(stis)
 
         return np.mean(importances, 0)
+
+    def _factorize(self, activations):
+        if activations.ndim == 4:          # (N, C, H, W) → pool
+            activations = torch.mean(activations, (2, 3))
+        assert torch.min(activations) >= 0, "Activations must be positive."
+        reducer = NMF(n_components=self.number_of_concepts)
+        U = reducer.fit_transform(torch_to_numpy(activations))
+        self.reducer = reducer
+        self.W = reducer.components_.astype(np.float32)
+        return U
