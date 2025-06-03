@@ -36,18 +36,18 @@ def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda')
                 sub = dataset[i : i + batch_size]          # sous-liste de chaînes
                 out = model(sub)                           # RoBERTa renvoie Tensor
                 results.append(out.cpu())
-    # IMAGE
+    # NUM (used when we work on pertubated activation / Sobol)
     else:
         with torch.no_grad():
             for i in start_ids:
                 x = torch.tensor(dataset[i:i+batch_size])
                 x = x.to(device)
     
-            if resize:
-                x = torch.nn.functional.interpolate(
-                    x, size=resize, mode='bilinear', align_corners=False)
-    
-            results.append(model(x).cpu())
+                if resize:
+                    x = torch.nn.functional.interpolate(
+                        x, size=resize, mode='bilinear', align_corners=False)
+        
+                results.append(model(x).cpu())
     
     results = torch.cat(results)
     return results
@@ -309,7 +309,7 @@ class Craft(BaseConceptExtractor):
 
         U = self.transform(inputs)
 
-        total_designs = nb_design * (self.number_of_concepts + 1)
+        total_designs = nb_design * (self.number_of_concepts + 2)
 
         masks = HaltonSequence()(self.number_of_concepts,
                              nb_design=total_designs).astype(np.float32)
