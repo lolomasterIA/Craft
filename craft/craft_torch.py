@@ -237,7 +237,7 @@ class Craft(BaseConceptExtractor):
         assert torch.min(activations) >= 0.0, "Activations must be positive."
 
         # apply NMF to the activations to obtain matrices U and W
-        reducer = NMF(n_components=self.number_of_concepts)
+        reducer = NMF(n_components=self.number_of_concepts, max_iter=1000)
         U = reducer.fit_transform(torch_to_numpy(activations))
         W = reducer.components_.astype(np.float32)
 
@@ -309,8 +309,12 @@ class Craft(BaseConceptExtractor):
 
         U = self.transform(inputs)
 
+        total_designs = nb_design * (self.number_of_concepts + 1)
+
         masks = HaltonSequence()(self.number_of_concepts,
-                                 nb_design=nb_design).astype(np.float32)
+                             nb_design=total_designs).astype(np.float32)
+        # masks = HaltonSequence()(self.number_of_concepts,
+        #                          nb_design=nb_design).astype(np.float32)
         estimator = JansenEstimator()
 
         importances = []
