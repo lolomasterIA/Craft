@@ -399,8 +399,12 @@ class Craft(BaseConceptExtractor):
                 batch_size=self.batch_size,
                 device=self.device
             )  # (B×D, nb_classes)
-            y_pred = y_pred[:, class_id].reshape(B, total_designs)  # (B, D)
-    
+            y_pred = y_pred[:, class_id]
+            # Recalcul dynamique de B à partir de la taille effective
+            B_eff = y_pred.shape[0] // total_designs
+            y_pred = y_pred[:B_eff * total_designs]  # on évite un résidu partiel
+            y_pred = y_pred.reshape(B_eff, total_designs)
+
             # Sobol pour chaque exemple du batch
             Print("Sobol")
             for i in range(B):
