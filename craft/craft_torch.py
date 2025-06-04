@@ -361,36 +361,50 @@ class Craft(BaseConceptExtractor):
 
         return np.mean(importances, 0)
 
-    def estimate_importance_vector(self, inputs, class_id, nb_design=32):
+    def estimate_importance_vector(self, inputs, class_id, nb_design=32, batch_size_inference=256):
         """
-        Vectorised version – compute all the corpus.
+        Vectorised version – compute Sobol indices on the full corpus,
+        but processes inference in batches to reduce memory usage.
         """
         self.check_if_fitted()
         U = self.transform(inputs)
         N, K = U.shape
         total_designs = nb_design * (K + 2)
     
-        masks = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)
-    
-        U_pert = U[:, None, :] * masks[None, :, :]  # (N, D, K)
-        U_pert = U_pert.reshape(-1, K)
-        
-        A_pert = U_pert @ self.W
-    
-        y_pred = _batch_inference(
-            self.latent_to_logit,
-            A_pert,
-            batch_size=self.batch_size,
-            device=self.device
-        )
-        y_pred = y_pred[:, class_id].reshape(N, total_designs)
+        # Masks for Sobol estimation
+        masks = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)  # (D, K)
     
         estimator = JansenEstimator()
-        stis_all = [
-            estimator(masks, y_pred[i].cpu().numpy(), nb_design)
-            for i in range(N)
-        ]
+        stis_all = []
+    
+        # Traitement en mini-batch
+        for start in range(0, N, batch_size_inference):
+            end = min(start + batch_size_inference, N)
+            U_batch = U[start:end]  # shape (B, K)
+            B = U_batch.shape[0]
+    
+            # Perturbation
+            U_pert = U_batch[:, None, :] * masks[None, :, :]  # (B, D, K)
+            U_pert = U_pert.reshape(-1, K)                    # (B×D, K)
+    
+            # Projection vers espace de logit
+            A_pert = U_pert @ self.W  # (B×D, latent_dim)
+    
+            y_pred = _batch_inference(
+                self.latent_to_logit,
+                A_pert,
+                batch_size=self.batch_size,
+                device=self.device
+            )  # (B×D, nb_classes)
+            y_pred = y_pred[:, class_id].reshape(B, total_designs)  # (B, D)
+    
+            # Sobol pour chaque exemple du batch
+            for i in range(B):
+                stis = estimator(masks, y_pred[i].cpu().numpy(), nb_design)
+                stis_all.append(stis)
+    
         return np.mean(stis_all, axis=0).astype(np.float32)
+
 
     
     def _factorize(self, activations):
