@@ -378,19 +378,16 @@ class Craft(BaseConceptExtractor):
     
         # Traitement en mini-batch
         for start in range(0, N, batch_size_inference):
-            print("test 1 ")
             end = min(start + batch_size_inference, N)
             U_batch = U[start:end]  # shape (B, K)
             B = U_batch.shape[0]
     
             # Perturbation
             U_pert = U_batch[:, None, :] * masks[None, :, :]  # (B, D, K)
-            print(U_pert.shape)
             U_pert = U_pert.reshape(-1, K)                    # (B×D, K)
     
             # Projection vers espace de logit
             A_pert = U_pert @ self.W  # (B×D, latent_dim)
-            print(A_pert.shape)
             
             y_pred = _batch_inference(
                 self.latent_to_logit,
@@ -405,7 +402,7 @@ class Craft(BaseConceptExtractor):
             y_pred = y_pred.reshape(B_eff, total_designs)
 
             # Sobol pour chaque exemple du batch
-            print("Sobol")
+
             for i in range(B):
                 stis = estimator(masks, y_pred[i].cpu().numpy(), nb_design)
                 stis_all.append(stis)
@@ -418,7 +415,7 @@ class Craft(BaseConceptExtractor):
         if activations.ndim == 4:          # (N, C, H, W) → pool
             activations = torch.mean(activations, (2, 3))
         assert torch.min(activations) >= 0, "Activations must be positive."
-        reducer = NMF(n_components=self.number_of_concepts)
+        reducer = NMF(n_components=self.number_of_concepts, max_iter=1000)
         U = reducer.fit_transform(torch_to_numpy(activations))
         self.reducer = reducer
         self.W = reducer.components_.astype(np.float32)
