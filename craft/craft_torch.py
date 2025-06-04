@@ -365,7 +365,6 @@ class Craft(BaseConceptExtractor):
         """
         Vectorised version – compute all the corpus.
         """
-        print("device : ",self.device)
         self.check_if_fitted()
         U = self.transform(inputs)
         N, K = U.shape
@@ -373,9 +372,9 @@ class Craft(BaseConceptExtractor):
     
         masks = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)
     
-        U_pert = U[:, None, :] * masks.T[None, :, :]
+        U_pert = U[:, None, :] * masks[None, :, :]  # (N, D, K)
         U_pert = U_pert.reshape(-1, K)
-    
+        
         A_pert = U_pert @ self.W
     
         y_pred = _batch_inference(
