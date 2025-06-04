@@ -379,17 +379,20 @@ class Craft(BaseConceptExtractor):
     
         # Traitement en mini-batch
         for start in range(0, N, batch_size_inference):
+            print("test 1 ")
             end = min(start + batch_size_inference, N)
             U_batch = U[start:end]  # shape (B, K)
             B = U_batch.shape[0]
     
             # Perturbation
             U_pert = U_batch[:, None, :] * masks[None, :, :]  # (B, D, K)
+            print(U_pert.shape)
             U_pert = U_pert.reshape(-1, K)                    # (B×D, K)
     
             # Projection vers espace de logit
             A_pert = U_pert @ self.W  # (B×D, latent_dim)
-    
+            print(A_pert.shape)
+            
             y_pred = _batch_inference(
                 self.latent_to_logit,
                 A_pert,
@@ -399,6 +402,7 @@ class Craft(BaseConceptExtractor):
             y_pred = y_pred[:, class_id].reshape(B, total_designs)  # (B, D)
     
             # Sobol pour chaque exemple du batch
+            Print("Sobol")
             for i in range(B):
                 stis = estimator(masks, y_pred[i].cpu().numpy(), nb_design)
                 stis_all.append(stis)
