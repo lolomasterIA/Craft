@@ -29,26 +29,26 @@ def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda')
 
     results = []
 
-    # # TEXTE: dataset is list/tuple and first element is str
-    # if isinstance(dataset, (list, tuple)) and isinstance(dataset[0], str):
-    #     with torch.no_grad():
-    #         for i in start_ids:
-    #             sub = dataset[i : i + batch_size]          # sous-liste de chaînes
-    #             out = model(sub)                           # RoBERTa renvoie Tensor
-    #             results.append(out.cpu())
-    # # NUM (used when we work on pertubated activation / Sobol)
-    # else:
-    with torch.no_grad():
-        for i in start_ids:
-            print("chatch :", i)
-            x = torch.tensor(dataset[i:i+batch_size])
-            x = x.to(device)
-
-            if resize:
-                x = torch.nn.functional.interpolate(
-                    x, size=resize, mode='bilinear', align_corners=False)
+    # TEXTE: dataset is list/tuple and first element is str
+    if isinstance(dataset, (list, tuple)) and isinstance(dataset[0], str):
+        with torch.no_grad():
+            for i in start_ids:
+                sub = dataset[i : i + batch_size] 
+                out = model(sub)
+                results.append(out.cpu())
+    # NUM (used when we work on pertubated activation / Sobol)
+    else:
+        with torch.no_grad():
+            for i in start_ids:
+                print("chatch :", i)
+                x = torch.tensor(dataset[i:i+batch_size])
+                x = x.to(device)
     
-            results.append(model(x).cpu())
+                if resize:
+                    x = torch.nn.functional.interpolate(
+                        x, size=resize, mode='bilinear', align_corners=False)
+        
+                results.append(model(x).cpu())
     
     results = torch.cat(results)
     return results
