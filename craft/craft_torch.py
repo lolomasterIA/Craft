@@ -290,7 +290,7 @@ class Craft(BaseConceptExtractor):
     def estimate_importance(self, inputs, class_id, nb_design=32, compute="loop"):
         if compute == "loop":
             return estimate_importance_loop(self, inputs, class_id, nb_design)
-        elif compute == "vector"
+        elif compute == "vector":
             print("ok vector")
             return estimate_importance_vector(self, inputs, class_id, nb_design)
         
@@ -368,7 +368,7 @@ class Craft(BaseConceptExtractor):
         """
         print("device : ",self.device)
         self.check_if_fitted()
-        U = self.transform(inputs)                       # (N, K)
+        U = self.transform(inputs)
         N, K = U.shape
         total_designs = nb_design * (K + 2)
     
