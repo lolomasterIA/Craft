@@ -40,7 +40,6 @@ def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda')
     else:
         with torch.no_grad():
             for i in start_ids:
-                print("chatch :", i)
                 x = torch.tensor(dataset[i:i+batch_size])
                 x = x.to(device)
     
@@ -406,7 +405,7 @@ class Craft(BaseConceptExtractor):
             y_pred = y_pred.reshape(B_eff, total_designs)
 
             # Sobol pour chaque exemple du batch
-            Print("Sobol")
+            print("Sobol")
             for i in range(B):
                 stis = estimator(masks, y_pred[i].cpu().numpy(), nb_design)
                 stis_all.append(stis)
