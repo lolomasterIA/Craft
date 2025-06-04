@@ -286,7 +286,13 @@ class Craft(BaseConceptExtractor):
 
         return U
 
-    def estimate_importance(self, inputs, class_id, nb_design=32):
+    def estimate_importance(self, inputs, class_id, nb_design=32, compute="loop"):
+        if compute == "loop":
+            return estimate_importance_loop(self, inputs, class_id, nb_design)
+        elif compute == "vector"
+            return estimate_importance_vector(self, inputs, class_id, nb_design)
+        
+    def estimate_importance_loop(self, inputs, class_id, nb_design=32):
         """
         Estimates the importance of each concept for a given class.
 
@@ -309,12 +315,7 @@ class Craft(BaseConceptExtractor):
 
         U = self.transform(inputs)
 
-        total_designs = nb_design * (self.number_of_concepts + 2)
-
-        masks = HaltonSequence()(self.number_of_concepts,
-                             nb_design=total_designs).astype(np.float32)
-        # masks = HaltonSequence()(self.number_of_concepts,
-        #                          nb_design=nb_design).astype(np.float32)
+        masks = HaltonSequence()(self.number_of_concepts, nb_design=nb_design).astype(np.float32)
         estimator = JansenEstimator()
 
         importances = []
@@ -359,6 +360,38 @@ class Craft(BaseConceptExtractor):
 
         return np.mean(importances, 0)
 
+    def estimate_importance_vector(self, inputs, class_id, nb_design=32):
+        """
+        Vectorised version – traite tout le corpus en une fois.
+        """
+        self.check_if_fitted()
+        U = self.transform(inputs)                       # (N, K)
+        N, K = U.shape
+        total_designs = nb_design * (K + 2)
+    
+        masks = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)
+    
+        U_pert = U[:, None, :] * masks.T[None, :, :]
+        U_pert = U_pert.reshape(-1, K)
+    
+        A_pert = U_pert @ self.W
+    
+        y_pred = _batch_inference(
+            self.latent_to_logit,
+            A_pert,
+            batch_size=self.batch_size,
+            device=self.device
+        )
+        y_pred = y_pred[:, class_id].reshape(N, total_designs)
+    
+        estimator = JansenEstimator()
+        stis_all = [
+            estimator(masks, y_pred[i].cpu().numpy(), nb_design)
+            for i in range(N)
+        ]
+        return np.mean(stis_all, axis=0).astype(np.float32)
+
+    
     def _factorize(self, activations):
         if activations.ndim == 4:          # (N, C, H, W) → pool
             activations = torch.mean(activations, (2, 3))
