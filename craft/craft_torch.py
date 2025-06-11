@@ -372,6 +372,8 @@ class Craft(BaseConceptExtractor):
     
         # Masks for Sobol estimation
         masks = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)  # (D, K)
+        masks_all = HaltonSequence()(K, nb_design=total_designs).astype(np.float32)
+
     
         estimator = JansenEstimator()
         stis_all = []
