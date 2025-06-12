@@ -441,7 +441,7 @@ class Craft(BaseConceptExtractor):
                            device=device)
         w_k = w_k / (w_k.norm() + 1e-8)
     
-        scores = (h @ w_k).cpu().numpy()           # (seq,)
+        scores = (h @ w_k.unsqueeze(1)).cpu().numpy()
     
         ids    = encoded["input_ids"][0].tolist()
         tokens = tokenizer.convert_ids_to_tokens(ids)
