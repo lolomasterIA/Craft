@@ -422,6 +422,36 @@ class Craft(BaseConceptExtractor):
     
         return np.mean(stis_all, axis=0).astype(np.float32)
 
+    def token_heatmap(self, text, concept_id, tokenizer, encoder):
+        """
+        Renvoie (tokens, scores) pour le concept_id sur le texte.
+        """
+        device = next(encoder.parameters()).device
+        encoded = tokenizer(text, return_tensors="pt").to(device)
+    
+        with torch.no_grad():
+            h = encoder(**encoded,
+                        output_hidden_states=True,
+                        return_dict=True
+                       ).hidden_states[-1][0]      # (seq, hidden)
+    
+        # vecteur du concept (colonne W[:, concept_id])
+        w_k = torch.tensor(self.W[:, concept_id],
+                           dtype=h.dtype,
+                           device=device)
+        w_k = w_k / (w_k.norm() + 1e-8)
+    
+        scores = (h @ w_k).cpu().numpy()           # (seq,)
+    
+        ids    = encoded["input_ids"][0].tolist()
+        tokens = tokenizer.convert_ids_to_tokens(ids)
+        keep   = [i for i,t in enumerate(tokens)
+                  if t not in tokenizer.all_special_tokens]
+        tokens = [tokens[i].replace("Ġ", "") for i in keep]
+        scores = scores[keep]
+    
+        return tokens, scores
+    
     
     def _factorize(self, activations):
         if activations.ndim == 4:          # (N, C, H, W) → pool
