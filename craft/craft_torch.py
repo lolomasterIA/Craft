@@ -222,16 +222,19 @@ class Craft(BaseConceptExtractor):
 
         # List / Tupple  (ex. text)
         else:
+            
             patches = None
             batches = []
+            signs = []
             # we don't use _batch_inference to not change it
             for i in range(0, len(inputs), self.batch_size):
-                # sous-liste de chaînes
                 sub_texts = inputs[i: i + self.batch_size]
                 with torch.no_grad():
-                    acts = self.input_to_latent(
-                        sub_texts).to(self.device)  # (b, D)
+                    acts, sign_mat = self.input_to_latent(inputs, return_sign=True)
+                    # acts = self.input_to_latent(
+                    #     sub_texts).to(self.device)  # (b, D)
                 batches.append(acts)
+                signs.append(sign_mat)
             activations = torch.cat(batches, dim=0)              # (N, D)
 
         assert torch.min(activations) >= 0.0, "Activations must be positive."
@@ -241,11 +244,18 @@ class Craft(BaseConceptExtractor):
         U = reducer.fit_transform(torch_to_numpy(activations))
         W = reducer.components_.astype(np.float32)
 
+        if signs is not None:
+            # signe conceptuel : sign(A) @ Wᵀ
+            sign_concepts = np.sign(signs.cpu().numpy() @ W_pos.T)
+            U = U * sign_concepts      
+
         # store the factorizer and W as attributes of the Craft instance
         self.reducer = reducer
         self.W = np.array(W, dtype=np.float32)
 
         return patches, U, W
+
+
 
     def check_if_fitted(self):
         """Checks if the factorization model has been fitted to input data.
