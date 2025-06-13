@@ -252,8 +252,8 @@ class Craft(BaseConceptExtractor):
         W = reducer.components_.astype(np.float32)
 
         if self.with_sign:
-            # signs_cat = torch.cat(signs, dim=0).cpu().numpy()
-            signs = np.array(signs)
+            signs_cat = torch.cat(signs, dim=0).cpu().numpy()
+            signs = np.array(signs_cat)
             sign_concepts = np.sign(signs_cat @ W)
             U = U * sign_concepts      
 
