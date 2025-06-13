@@ -253,7 +253,9 @@ class Craft(BaseConceptExtractor):
 
         if self.with_sign:
             signs_cat = torch.cat(signs, dim=0).cpu().numpy()
-            signs = np.array(signs_cat)
+            signs_cat = np.array(signs_cat)
+            signs_cat = np.sign(signs_cat).mean(axis=1)            # (N, D)
+            signs_cat = np.sign(signs_cat)
             sign_concepts = np.sign(signs_cat @ W.T)
             U = U * sign_concepts      
 
@@ -306,7 +308,8 @@ class Craft(BaseConceptExtractor):
             U = np.reshape(
                 U, (-1, activation_size, activation_size, U.shape[-1]))
         if self.with_sign:
-            signs = np.array(signs)
+            signs = np.sign(signs).mean(axis=1)            # (N, D)
+            signs = np.sign(signs)
             sign_concepts = np.sign(signs @ self.W.T)
             print(signs.shape)
             print(self.W.shape)
