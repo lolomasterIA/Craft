@@ -254,7 +254,7 @@ class Craft(BaseConceptExtractor):
         if self.with_sign:
             signs_cat = torch.cat(signs, dim=0).cpu().numpy()
             signs = np.array(signs_cat)
-            sign_concepts = np.sign(signs_cat @ W)
+            sign_concepts = np.sign(signs_cat @ W.T)
             U = U * sign_concepts      
 
         # store the factorizer and W as attributes of the Craft instance
@@ -307,7 +307,7 @@ class Craft(BaseConceptExtractor):
                 U, (-1, activation_size, activation_size, U.shape[-1]))
         if self.with_sign:
             signs = np.array(signs)
-            sign_concepts = np.sign(signs @ self.W)
+            sign_concepts = np.sign(signs @ self.W.T)
             print(signs.shape)
             print(self.W.shape)
             U = U * sign_concepts
