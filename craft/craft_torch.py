@@ -306,6 +306,8 @@ class Craft(BaseConceptExtractor):
                 U, (-1, activation_size, activation_size, U.shape[-1]))
         if self.with_sign:
             sign_concepts = np.sign(signs @ self.W)
+            print(signs.shape)
+            print(self.W.shape)
             U = U * sign_concepts
         return U
 
