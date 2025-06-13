@@ -301,11 +301,11 @@ class Craft(BaseConceptExtractor):
         U = self.reducer.transform(torch_to_numpy(activations).astype(W_dtype))
 
         if is_4d:
-            # (N * W * H, R) -> (N, W, H, R)
+            # (N * W * H, R) -> (N,np.sign W, H, R)
             U = np.reshape(
                 U, (-1, activation_size, activation_size, U.shape[-1]))
         if self.with_sign:
-            sign_concepts = np.sign(signs.cpu().numpy() @ self.W)
+            sign_concepts = np.sign(signs @ self.W)
             U = U * sign_concepts
         return U
 
