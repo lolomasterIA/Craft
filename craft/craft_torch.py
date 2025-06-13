@@ -36,7 +36,7 @@ def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda',
             for i in start_ids:
                 sub = dataset[i : i + batch_size] 
                 if with_sign:
-                    out, sign = model(sub)
+                    out, sign = model(sub, return_sign=True)
                 else:
                     out = model(sub)
                 results.append(out.cpu())
