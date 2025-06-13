@@ -23,19 +23,24 @@ def torch_to_numpy(tensor):
         return np.array(tensor)
 
 
-def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda'):
+def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda', with_sign=False):
     nb_batchs = ceil(len(dataset) / batch_size)
     start_ids = [i*batch_size for i in range(nb_batchs)]
 
     results = []
+    signs = []
 
     # TEXTE: dataset is list/tuple and first element is str
     if isinstance(dataset, (list, tuple)) and isinstance(dataset[0], str):
         with torch.no_grad():
             for i in start_ids:
                 sub = dataset[i : i + batch_size] 
-                out = model(sub)
+                if with_sign:
+                    out, sign = model(sub)
+                else:
+                    out = model(sub)
                 results.append(out.cpu())
+                signs.append(sign.cpu())
     # NUM (used when we work on pertubated activation / Sobol)
     else:
         with torch.no_grad():
@@ -50,7 +55,10 @@ def _batch_inference(model, dataset, batch_size=128, resize=None, device='cuda')
                 results.append(model(x).cpu())
     
     results = torch.cat(results)
-    return results
+    if with_sign:
+        return results, signs
+    else:
+        return results
 
 
 class BaseConceptExtractor(ABC):
@@ -151,12 +159,14 @@ class Craft(BaseConceptExtractor):
                  number_of_concepts: int = 20,
                  batch_size: int = 64,
                  patch_size: int = 64,
-                 device: str = 'cuda'):
+                 device: str = 'cuda',
+                 with_sign = False):
         super().__init__(input_to_latent, latent_to_logit, number_of_concepts, batch_size)
 
         self.patch_size = patch_size
         self.activation_shape = None
         self.device = device
+        self.with_sign = with_sign
 
     def fit(self, inputs):
         """
@@ -222,7 +232,6 @@ class Craft(BaseConceptExtractor):
 
         # List / Tupple  (ex. text)
         else:
-            
             patches = None
             batches = []
             signs = []
@@ -231,8 +240,6 @@ class Craft(BaseConceptExtractor):
                 sub_texts = inputs[i: i + self.batch_size]
                 with torch.no_grad():
                     acts, sign_mat = self.input_to_latent(inputs, return_sign=True)
-                    # acts = self.input_to_latent(
-                    #     sub_texts).to(self.device)  # (b, D)
                 batches.append(acts)
                 signs.append(sign_mat)
             activations = torch.cat(batches, dim=0)              # (N, D)
@@ -244,8 +251,7 @@ class Craft(BaseConceptExtractor):
         U = reducer.fit_transform(torch_to_numpy(activations))
         W = reducer.components_.astype(np.float32)
 
-        if signs is not None:
-            # signe conceptuel : sign(A) @ Wᵀ
+        if self.with_sign:
             sign_concepts = np.sign(signs.cpu().numpy() @ W_pos.T)
             U = U * sign_concepts      
 
@@ -274,9 +280,13 @@ class Craft(BaseConceptExtractor):
         self.check_if_fitted()
 
         if activations is None:
-            activations = _batch_inference(self.input_to_latent, inputs, self.batch_size,
+            if self.with_sign:
+                activations, signs = _batch_inference(self.input_to_latent, inputs, self.batch_size,
+                                           device=self.device, with_sign=True)
+            else:
+                activations = _batch_inference(self.input_to_latent, inputs, self.batch_size,
                                            device=self.device)
-
+                
         is_4d = len(activations.shape) == 4
 
         if is_4d:
@@ -293,7 +303,9 @@ class Craft(BaseConceptExtractor):
             # (N * W * H, R) -> (N, W, H, R)
             U = np.reshape(
                 U, (-1, activation_size, activation_size, U.shape[-1]))
-
+        if self.with_sign:
+            sign_concepts = np.sign(signs.cpu().numpy() @ self.W)
+            U = U * sign_concepts
         return U
 
     def estimate_importance(self, inputs, class_id, nb_design=32, compute="loop"):
@@ -411,11 +423,18 @@ class Craft(BaseConceptExtractor):
                 A_pert = U_pert @ self.W
     
                 # logits → proba classe (vectorisé dans _batch_inference)
-                y = _batch_inference(
+                out = _batch_inference(
                     self.latent_to_logit, A_pert,
                     batch_size=self.batch_size,
-                    device=self.device
-                )[:, class_id].cpu().numpy()      # (B·d_chunk,)
+                    device=self.device,
+                    with_sign=self.with_sign
+                )
+                if isinstance(out, tuple):
+                    logits, _sign = out
+                else:
+                    logits = out
+                
+                y = logits[:, class_id].cpu().numpy()      # (B·d_chunk,)
     
                 # On remet en forme et on range dans y_pred_full
                 y = y.reshape(B, d1 - d0)
