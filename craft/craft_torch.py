@@ -252,7 +252,7 @@ class Craft(BaseConceptExtractor):
         W = reducer.components_.astype(np.float32)
 
         if self.with_sign:
-            sign_concepts = np.sign(signs @ W_pos.T)
+            sign_concepts = np.sign(signs @ W.T)
             U = U * sign_concepts      
 
         # store the factorizer and W as attributes of the Craft instance
