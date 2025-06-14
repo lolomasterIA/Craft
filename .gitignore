@@ -60,6 +60,7 @@ xplique_dev_env/
 # notebooks and lab
 notebooks/
 lab/
+assets/siamese/
 
 # ide
 .idea
@@ -67,3 +68,4 @@ lab/
 
 # mac os
 .DS_Store
+
