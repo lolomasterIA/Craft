@@ -1,9 +1,7 @@
 # 👋 CRAFT: Concept Recursive Activation FacTorization for Explainability (CVPR 2023) - update 2025, Master AI at Telecom Paris
 
 This reproductivity project was realized for XAI courses of the specialized Master’s AI Data expert & MLops at Telecom Paris. 
-This repository contains our works based on CRAFT's github and the code for paper : 
-
-*Extending CRAFT: Cross-Architecture and Cross-Modal Concept Factorization*
+This repository contains our works based on CRAFT's github and the code for paper : **"Extending CRAFT: Cross-Architecture and Cross-Modal Concept Factorization"**
 
 *[begin update]*  
 
