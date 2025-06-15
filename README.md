@@ -1,10 +1,17 @@
 # 👋 CRAFT: Concept Recursive Activation FacTorization for Explainability (CVPR 2023) - update 2025, Master AI at Telecom Paris
 
+This reproductivity project was realized for XAI courses of the specialized Master’s AI Data expert & MLops at Telecom Paris. 
+This repository contains our works based on CRAFT's github and the code for paper : 
+
+*Extending CRAFT: Cross-Architecture and Cross-Modal Concept Factorization*
+
 [begin update]  
 
-Tests on other datasets in the test folder (daisy, cat, baby)  
-Experimentation on ViT model (DINOv2), transformers architecture, dataset with images so no modification of the Craft class  
-Experimentation on the language model RoBERTa fine-tuned with specifique dataset (classification of products reviews from e-commerce website)    
+Voici la structure de dépôt:
+- /test : notebooks de test pour différentes dataset (chat, bébé, daisy et voiture)
+- craft_pytorch_DINOv2ClassifierHead.ipynb: Experimentation on ViT model (DINOv2), transformers architecture, dataset with images so no modification of the Craft class
+- craft_pytorch_RoBERTaClassifer.ipynb: Experimentation on the language model RoBERTa fine-tuned with specifique dataset (classification of products reviews from e-commerce website) 
+ 
 The Craft class was modified in this way :
 - Explicit support for multiple input types for fit(): Images (4D tensor), re-calculated activations (2D), Text sequences (list of str)
 - _batch_inference() adapted for texts sequences too
