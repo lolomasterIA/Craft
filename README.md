@@ -1,4 +1,4 @@
-# 👋 CRAFT: Concept Recursive Activation FacTorization for Explainability (CVPR 2023)
+# 👋 CRAFT: Concept Recursive Activation FacTorization for Explainability (CVPR 2023) - update 2025, Master AI at Telecom Paris
 
 [begin update]  
 
