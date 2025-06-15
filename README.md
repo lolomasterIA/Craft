@@ -3,7 +3,7 @@
 [begin update]  
 
 Tests on other datasets in the test folder (daisy, cat, baby)  
-Experimentation on ViT model, transformers architecture, dataset with images so no modification of the Craft class  
+Experimentation on ViT model (DINOv2), transformers architecture, dataset with images so no modification of the Craft class  
 Experimentation on the language model RoBERTa fine-tuned with specifique dataset (classification of products reviews from e-commerce website)    
 The Craft class was modified in this way :
 - Explicit support for multiple input types for fit(): Images (4D tensor), re-calculated activations (2D), Text sequences (list of str)
