@@ -1,6 +1,7 @@
 # 👋 CRAFT: Concept Recursive Activation FacTorization for Explainability (CVPR 2023)
 
-[begin update]
+[begin update]  
+
 Tests on other datasets in the test folder (daisy, cat, baby)
 Experimentation on ViT model, transformers architecture, dataset with images so no modification of the Craft class
 Experimentation on the language model RoBERTa fine-tuned with specifique dataset (classification of products reviews from e-commerce website)   
@@ -10,6 +11,7 @@ The Craft class was modified in this way :
 - estimate_importance_vector(): vectorized, faster version (used only for texts, _loop for images, existing method)
 - Added the token_heatmap() method: Allows you to associate concept weights with text tokens, useful for NLP interpretability.
 This new version is backward compatible
+
 [end_update]
 
 This repository contains code for the paper:
