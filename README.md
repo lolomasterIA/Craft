@@ -5,7 +5,7 @@ This repository contains our works based on CRAFT's github and the code for pape
 
 *Extending CRAFT: Cross-Architecture and Cross-Modal Concept Factorization*
 
-[begin update]  
+*[begin update]*  
 
 Voici la structure de dépôt:
 - /test : notebooks de test pour différentes dataset (chat, bébé, daisy et voiture)
@@ -19,7 +19,9 @@ The Craft class was modified in this way :
 - Added the token_heatmap() method: Allows you to associate concept weights with text tokens, useful for NLP interpretability.
 This new version is backward compatible
 
-[end update]
+*[end update]*
+
+---
 
 This repository contains code for the paper:
 
